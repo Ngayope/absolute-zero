@@ -1,0 +1,21 @@
+name: Global Autonomous Agent
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # 15分ごとに自動実行
+  workflow_dispatch: # 手動で「今すぐ実行」するボタンも付ける
+
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Execute Autonomous Logic
+        run: python agent.py
