@@ -5,6 +5,9 @@ on:
     - cron: '*/15 * * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write # 生成されたファイルをリポジトリに保存するための権限
+
 jobs:
   run-agent:
     runs-on: ubuntu-latest
@@ -13,10 +16,31 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - name: Install Tools
-        run: pip install google-generativeai tavily-python requests beautifulsoup4
-      - name: Execute Core
+      
+      - name: Install Dependencies
+        # 外部連携に必要な主要パッケージを事前に全てインストールする
+        run: pip install google-generativeai tavily-python requests beautifulsoup4 tweepy praw sendgrid
+      
+      - name: Execute Core Script
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USERNAME: ${{ secrets.REDDIT_USERNAME }}
+          REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python agent.py
+
+      - name: Commit Generated Artifacts
+        # 実行コードや生成されたHTMLファイル等をリポジトリに保存する
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Auto-generated artifacts by AI Agent" || echo "No changes to commit"
+          git push
