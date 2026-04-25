@@ -1,21 +1,22 @@
-name: Global Autonomous Agent
+name: Absolute Zero Core
 
 on:
   schedule:
-    - cron: '*/15 * * * *' # 15分ごとに自動実行
-  workflow_dispatch: # 手動で「今すぐ実行」するボタンも付ける
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
 
 jobs:
   run-agent:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
-      - name: Execute Autonomous Logic
+      - name: Install Tools
+        run: pip install google-generativeai tavily-python requests beautifulsoup4
+      - name: Execute Core
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
         run: python agent.py
