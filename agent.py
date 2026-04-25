@@ -1,49 +1,43 @@
 import os
-import subprocess
+import json
+import requests
 import google.generativeai as genai
 from tavily import TavilyClient
 
 SOLANA_WALLET = "GuJZK4NVNs8rADPJAUc3pqRS1Xy1qyHRN5Qtg6oNrdRZ"
 
-def execute_absolute_zero():
+def send_to_webhook():
     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    model = genai.GenerativeModel('gemini-pro')
+    model = genai.GenerativeModel('gemini-pro', generation_config={"response_mime_type": "application/json"})
     tavily = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
 
-    print("情報の検索を開始...")
+    print("全世界の最新情報を検索中...")
     search_results = tavily.search(query="latest urgent needs OR global trends", search_depth="advanced")
 
     prompt = f"""
-    あなたはITストラテジストです。
-    以下の検索データから「最も収益化可能なニーズ」を特定し、Solanaアドレス（{SOLANA_WALLET}）へ送金させるための「最適な集金手段」を決定してください。
+    あなたはITストラテジストです。検索データから最も収益化可能なニーズを特定し、Solana（{SOLANA_WALLET}）への送金を促す戦略を立ててください。
     
     検索データ: {search_results}
     
-    【指示】
-    決定した手段を実行するための、完全なPythonスクリプトのコードのみを出力してください。Markdownの装飾(```pythonなど)は一切含めないでください。
-    実行環境には以下のパッケージがインストール済みです: requests, beautifulsoup4, tweepy, praw, sendgrid
+    以下のJSONスキーマに従って、出力先プラットフォームと、そのプラットフォームで実行する最適な形式のデータを出力してください。テキストに限定しません。Webページ用のHTML、実行用のPythonコード、画像生成用プロンプト、CSVデータなど、最も効果的なフォーマットを選択してください。
     
-    以下の環境変数が利用可能です。これら以外の外部APIキーを必要とするコードは生成しないでください。
-    - GEMINI_API_KEY
-    - TAVILY_API_KEY
-    - X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_SECRET
-    - REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USERNAME, REDDIT_PASSWORD
-    - DISCORD_WEBHOOK_URL
-    
-    HTMLやデータファイルを出力する場合、カレントディレクトリに保存するコードにしてください。
+    {{
+        "target_platform": "発信またはデプロイ先のサービス名（例: Vercel, X, Email, Discord, 独自サーバー）",
+        "payload_type": "生成したデータの形式（例: html, python_script, plain_text, image_prompt, json）",
+        "payload_content": "実際のデータの中身（コードの全量、テキスト内容など）"
+    }}
     """
     
-    print("実行コードの生成中...")
-    generated_code = model.generate_content(prompt).text.replace("```python", "").replace("```", "").strip()
+    print("戦略指示書（JSON）を作成中...")
+    response_json = model.generate_content(prompt).text
+    data = json.loads(response_json)
+    print(f"戦略決定: {data['target_platform']} に向けて {data['payload_type']} 形式のデータを出力します。")
 
-    with open("dynamic_action.py", "w", encoding="utf-8") as f:
-        f.write(generated_code)
-    
-    print("プログラムを実行します...")
-    try:
-        result = subprocess.run(["python", "dynamic_action.py"], capture_output=True, text=True, check=True)
-        print("実行結果:\n", result.stdout)
-    except subprocess.CalledProcessError as e:
-        print("実行エラー:\n", e.stderr)
+    webhook_url = os.environ["WEBHOOK_URL"]
+    if webhook_url:
+        response = requests.post(webhook_url, json=data)
+        print(f"Webhook送信結果: {response.status_code}")
+    else:
+        print("[Skip] Webhook URLが設定されていません。")
 
-execute_absolute_zero()
+send_to_webhook()
